@@ -2,7 +2,7 @@
 
 import pandas as pd
 import os
-from typing import List, Dict, Any
+from typing import List
 from backend.app.api.v1.schemas.nv_schemas import SaleNote, Plan, Spool, Material, Joint
 from backend.app.core.config import OUTPUT_DIR_ETAPA_1_SALIDA
 
@@ -171,7 +171,7 @@ def get_available_excel_files() -> List[str]:
     return excel_files
 
 
-def validate_excel_structure(filename: str) -> Dict[str, Any]:
+def validate_excel_structure(filename: str) -> tuple[bool, str]:
     """
     Valida que un archivo Excel tenga la estructura esperada.
     
@@ -179,27 +179,19 @@ def validate_excel_structure(filename: str) -> Dict[str, Any]:
         filename: Nombre del archivo Excel a validar
         
     Returns:
-        Dict[str, Any]: Diccionario con información de validación
+        tuple[bool, str]: (Es válido, Mensaje descriptivo)
     """
     file_path = os.path.join(OUTPUT_DIR_ETAPA_1_SALIDA, filename)
     
-    validation_result: Dict[str, Any] = {
-        "valid": False,
-        "errors": [],
-        "warnings": [],
-        "info": {}
-    }
-    
     if not os.path.exists(file_path):
-        validation_result["errors"].append(f"Archivo no encontrado: {filename}")
-        return validation_result
+        return False, f"Archivo no encontrado: {filename}"
     
     try:
         # Verificar que existan las hojas requeridas
         xl = pd.ExcelFile(file_path)
         sheet_names = xl.sheet_names
         
-        # Buscar las hojas de materiales y uniones (pueden estar en español o inglés)
+        # Buscar las hojas de materiales y uniones
         materials_sheet = None
         joints_sheet = None
         
@@ -210,12 +202,10 @@ def validate_excel_structure(filename: str) -> Dict[str, Any]:
                 joints_sheet = sheet
         
         if not materials_sheet:
-            validation_result["errors"].append("No se encontró hoja de materiales (buscar: 'Materials' o 'materiales')")
-            return validation_result
+            return False, "No se encontró hoja de materiales (buscar: 'Materials' o 'materiales')"
         
         if not joints_sheet:
-            validation_result["errors"].append("No se encontró hoja de uniones (buscar: 'Joints' o 'uniones')")
-            return validation_result
+            return False, "No se encontró hoja de uniones (buscar: 'Joints' o 'uniones')"
         
         # Leer las hojas
         df_materials: pd.DataFrame = pd.read_excel(file_path, sheet_name=materials_sheet)  # type: ignore
@@ -229,30 +219,57 @@ def validate_excel_structure(filename: str) -> Dict[str, Any]:
         missing_joint_columns = [col for col in required_joint_columns if col not in df_joints.columns]
         
         if missing_material_columns:
-            validation_result["errors"].append(f"Columnas faltantes en Materials: {missing_material_columns}")
+            return False, f"Columnas faltantes en Materials: {missing_material_columns}"
         
         if missing_joint_columns:
-            validation_result["errors"].append(f"Columnas faltantes en Joints: {missing_joint_columns}")
+            return False, f"Columnas faltantes en Joints: {missing_joint_columns}"
         
-        if validation_result["errors"]:
-            return validation_result
+        # Todo está bien
+        total_materials = len(df_materials)
+        total_joints = len(df_joints)
+        unique_spools = df_materials['spool'].nunique()  # type: ignore
         
-        # Información adicional
-        validation_result["info"] = {
-            "total_materials": len(df_materials),
-            "total_joints": len(df_joints),
-            "unique_nvs": df_materials['nv'].nunique(),  # type: ignore
-            "unique_plans": df_materials['plano'].nunique(),  # type: ignore
-            "unique_spools": df_materials['spool'].nunique()  # type: ignore
-        }
-        
-        # Advertencias
-        if df_materials['nv'].nunique() > 1:  # type: ignore
-            validation_result["warnings"].append("Se encontraron múltiples NVs en el archivo")
-        
-        validation_result["valid"] = True
+        return True, f"✅ Archivo válido: {total_materials} materiales, {total_joints} uniones, {unique_spools} spools"
         
     except Exception as e:
-        validation_result["errors"].append(f"Error al validar el archivo: {str(e)}")
+        return False, f"Error al validar el archivo: {str(e)}"
+
+
+def get_spools_from_excel(filename: str) -> List[str]:
+    """
+    Extrae la lista única de spools desde un archivo Excel.
     
-    return validation_result
+    Args:
+        filename: Nombre del archivo Excel
+        
+    Returns:
+        List[str]: Lista única de nombres de spools encontrados
+    """
+    file_path = os.path.join(OUTPUT_DIR_ETAPA_1_SALIDA, filename)
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Archivo no encontrado: {file_path}")
+    
+    try:
+        # Leer hoja de materiales para obtener spools
+        xl = pd.ExcelFile(file_path)
+        sheet_names = xl.sheet_names
+        
+        materials_sheet = None
+        for sheet in sheet_names:
+            if isinstance(sheet, str) and sheet.lower() in ['materials', 'materiales']:
+                materials_sheet = sheet
+                break
+        
+        if not materials_sheet:
+            raise ValueError("No se encontró hoja de materiales")
+        
+        df_materials = pd.read_excel(file_path, sheet_name=materials_sheet)  # type: ignore
+        
+        # Obtener spools únicos (ignorar valores nulos)
+        unique_spools = df_materials['spool'].dropna().unique()  # type: ignore
+        spools_list = [str(spool) for spool in unique_spools]  # type: ignore
+        return sorted(spools_list)  # Devolver ordenados
+        
+    except Exception as e:
+        raise ValueError(f"Error al leer spools del archivo Excel: {str(e)}")

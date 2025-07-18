@@ -4,6 +4,7 @@ import os
 
 # Carpeta donde están los PDFs de entrada
 INPUT_DIR = os.getenv("INPUT_DIR", "data/pdf_entradas/")
+PDF_INPUT_DIR = INPUT_DIR  # Alias para compatibilidad
 
 # Carpeta donde se guardan los TXT generados
 OUTPUT_DIR = os.getenv("OUTPUT_DIR", "data/pdf_salidas/")

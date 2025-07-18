@@ -1,0 +1,36 @@
+# Comandos Recurrentes - Piping Reader
+
+## Activar Entorno Virtual
+venv\Scripts\activate
+
+## Instalar Dependencias
+pip install -r requirements.txt
+
+## Ejecutar FastAPI (Swagger UI)
+cd backend
+uvicorn app.main:app --reload
+# Luego ir a: http://localhost:8000/docs
+
+## Ejecutar Streamlit
+streamlit run streamlit_app.py
+# Luego ir a: http://localhost:8501
+
+## Instalar paquetes específicos
+pip install streamlit
+pip install pandas
+pip install fastapi
+pip install uvicorn
+
+## Git Commands
+git add .
+git commit -m "mensaje del commit"
+git push origin main
+
+## Estructura de directorios
+data/
+  pdf_entradas/          # PDFs de entrada
+  etapa_1_salida/        # Excel de salida
+  pdf_salidas/           # TXT de salida
+
+## Testing
+python test_excel_reader.py

@@ -13,6 +13,8 @@ __pycache__/
 
 # Data files (optional - remove if you want to track data)
 data/
+# Excepto archivos de ejemplo
+!data/etapa_1_salida/nv_data_ejemplo.xlsx
 
 # IDE
 .vscode/
