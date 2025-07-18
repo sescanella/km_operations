@@ -15,6 +15,9 @@ __pycache__/
 data/
 # Excepto archivos de ejemplo
 !data/etapa_1_salida/nv_data_ejemplo.xlsx
+# Incluir estructura de directorios JSON y logs
+!data/json_data/.gitkeep
+!data/logs/.gitkeep
 
 # IDE
 .vscode/

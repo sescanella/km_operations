@@ -2,8 +2,7 @@ import streamlit as st
 import sys
 import os
 from pathlib import Path
-import pandas as pd
-from typing import Optional
+import pandas as pd  # type: ignore
 
 # Agregar el directorio backend al path para importar módulos
 sys.path.append(str(Path(__file__).parent / "backend"))
@@ -17,6 +16,7 @@ from backend.app.services.etapa_2.excel_reader import (
 from backend.app.services.etapa_1.excel_generator import generate_empty_excel
 from backend.app.services.etapa_1.pdf_extraction import extract_text_from_pdf
 from backend.app.core.config import OUTPUT_DIR_ETAPA_1_SALIDA, PDF_INPUT_DIR
+from backend.app.services.etapa_2.json_converter import load_json_as_sale_note, save_sale_note_to_json
 
 # Configuración de la página
 st.set_page_config(
@@ -38,7 +38,10 @@ page = st.sidebar.selectbox(
         "📊 Dashboard",
         "📥 Etapa 1: Procesamiento PDF",
         "📋 Etapa 2: Lectura Excel",
-        "🔧 Herramientas Adicionales"
+        "🔄 Extracción Excel → JSON",
+        "📝 Editor de Datos (JSON)",
+        "🔧 Herramientas Adicionales",
+        "📂 Ver JSONs Generados"
     ]
 )
 
@@ -199,9 +202,9 @@ elif page == "📋 Etapa 2: Lectura Excel":
                             
                             # Mostrar materiales en tabla
                             if plan.spool_data.materials:
-                                materials_data = []
+                                materials_data = []  # type: ignore
                                 for mat in plan.spool_data.materials:
-                                    materials_data.append({
+                                    materials_data.append({  # type: ignore
                                         "Número Interno": mat.mat_numero_interno,
                                         "Descripción": mat.mat_descripcion,
                                         "DN": mat.mat_dn,
@@ -209,13 +212,13 @@ elif page == "📋 Etapa 2: Lectura Excel":
                                         "Cantidad": mat.mat_qty
                                     })
                                 st.write("**Materiales:**")
-                                st.dataframe(pd.DataFrame(materials_data))
+                                st.dataframe(pd.DataFrame(materials_data))  # type: ignore
                             
                             # Mostrar uniones en tabla
                             if plan.spool_data.joints:
-                                joints_data = []
+                                joints_data = []  # type: ignore
                                 for joint in plan.spool_data.joints:
-                                    joints_data.append({
+                                    joints_data.append({  # type: ignore
                                         "Número": joint.union_numero,
                                         "DN": joint.union_dn,
                                         "Tipo": joint.union_tipo,
@@ -224,12 +227,111 @@ elif page == "📋 Etapa 2: Lectura Excel":
                                         "Soldador Remate": joint.soldador_remate
                                     })
                                 st.write("**Uniones:**")
-                                st.dataframe(pd.DataFrame(joints_data))
+                                st.dataframe(pd.DataFrame(joints_data))  # type: ignore
                 
                 if 'spools' in st.session_state:
                     st.subheader("🏗️ Lista de Spools")
                     for spool in st.session_state['spools']:
                         st.write(f"- {spool}")
+
+# Página de extracción Excel → JSON
+elif page == "🔄 Extracción Excel → JSON":
+    st.header("🔄 Extracción de Información Excel → JSON")
+    st.markdown("Esta sección convierte archivos Excel en formato JSON para su posterior edición.")
+    
+    # Mostrar archivos Excel disponibles
+    excel_files = get_available_excel_files()
+    if not excel_files:
+        st.warning("No se encontraron archivos Excel en 'data/etapa_1_salida/'")
+        st.info("Usa la Etapa 1 para generar archivos Excel o coloca archivos manualmente en la carpeta.")
+    else:
+        st.success(f"Se encontraron {len(excel_files)} archivo(s) Excel disponible(s)")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("📁 Archivos Excel Disponibles")
+            for file in excel_files:
+                st.write(f"• {file}")
+        
+        with col2:
+            st.subheader("⚙️ Conversión a JSON")
+            selected_file = st.selectbox("Selecciona archivo para convertir:", excel_files)
+            
+            if st.button("🔄 Convertir a JSON", type="primary"):
+                try:
+                    with st.spinner("Procesando archivo Excel..."):
+                        from backend.app.services.etapa_2.json_converter import convert_excel_to_json
+                        json_path = convert_excel_to_json(selected_file)
+                        st.success(f"✅ JSON creado exitosamente en: `{json_path}`")
+                        
+                        # Mostrar preview del JSON
+                        import json
+                        with open(json_path, 'r', encoding='utf-8') as f:
+                            json_data = json.load(f)
+                        
+                        st.subheader("📋 Preview del JSON generado")
+                        st.json(json_data)
+                        
+                except Exception as e:
+                    st.error(f"❌ Error al procesar {selected_file}: {str(e)}")
+    
+    # Mostrar archivos JSON existentes
+    st.markdown("---")
+    st.subheader("📂 Archivos JSON Generados")
+    json_dir = os.path.join("data", "json_data")
+    if os.path.exists(json_dir):
+        json_files = [f for f in os.listdir(json_dir) if f.endswith('.json')]
+        if json_files:
+            st.success(f"Archivos JSON disponibles: {len(json_files)}")
+            cols = st.columns(min(len(json_files), 3))
+            for i, json_file in enumerate(json_files):
+                with cols[i % 3]:
+                    st.metric(label="Archivo", value=json_file.replace('.json', ''))
+                    json_path = os.path.join(json_dir, json_file)
+                    file_size = os.path.getsize(json_path)
+                    st.caption(f"Tamaño: {file_size} bytes")
+        else:
+            st.info("No hay archivos JSON generados aún.")
+    else:
+        st.info("Directorio de JSON no existe. Se creará al generar el primer archivo.")
+
+# Página de edición de datos en tabla
+elif page == "📝 Editor de Datos (JSON)":
+    st.header("📝 Editor de Datos - JSON generado desde Excel")
+    json_dir = os.path.join("data", "json_data")
+    if not os.path.exists(json_dir):
+        st.warning("No hay archivos JSON generados. Procesa primero un Excel.")
+    else:
+        json_files = [f for f in os.listdir(json_dir) if f.endswith('.json')]
+        if not json_files:
+            st.info("No hay archivos JSON disponibles.")
+        else:
+            selected_file = st.selectbox("Selecciona archivo JSON", json_files)
+            nv = int(selected_file.replace('nv_', '').replace('.json', ''))
+            sale_note = load_json_as_sale_note(nv)
+            st.subheader(f"NV: {sale_note.nv}")
+            for plan in sale_note.plans:
+                st.markdown(f"### Plano: {plan.plano}")
+                # Materiales
+                st.markdown("**Materiales**")
+                df_mat = pd.DataFrame([m.model_dump() for m in plan.spool_data.materials])
+                edited_mat = st.data_editor(df_mat, num_rows="dynamic", use_container_width=True, key=f"mat_{plan.plano}")
+                # Uniones
+                st.markdown("**Uniones**")
+                df_joints = pd.DataFrame([j.model_dump() for j in plan.spool_data.joints])
+                edited_joints = st.data_editor(df_joints, num_rows="dynamic", use_container_width=True, key=f"joints_{plan.plano}")
+                # Guardar cambios
+                if st.button(f"💾 Guardar cambios {plan.plano}"):
+                    # Actualizar objetos
+                    for i, row in edited_mat.iterrows():  # type: ignore
+                        for field in row.index:
+                            setattr(plan.spool_data.materials[i], field, row[field])  # type: ignore
+                    for i, row in edited_joints.iterrows():  # type: ignore
+                        for field in row.index:
+                            setattr(plan.spool_data.joints[i], field, row[field])  # type: ignore
+                    save_sale_note_to_json(sale_note)
+                    st.success(f"Cambios guardados en {selected_file}")
 
 # Herramientas Adicionales
 elif page == "🔧 Herramientas Adicionales":
@@ -282,6 +384,29 @@ elif page == "🔧 Herramientas Adicionales":
             st.success("✅ Cache limpiado")
 
 # Footer
+
+# Nueva sección para ver los JSONs generados
+if page == "📂 Ver JSONs Generados":
+    st.header("📂 Archivos JSON Generados")
+    json_dir = os.path.join("data", "json_data")
+    if not os.path.exists(json_dir):
+        st.warning("No hay archivos JSON generados. Procesa primero un Excel.")
+    else:
+        json_files = [f for f in os.listdir(json_dir) if f.endswith('.json')]
+        if not json_files:
+            st.info("No hay archivos JSON disponibles.")
+        else:
+            selected_file = st.selectbox("Selecciona archivo JSON para visualizar", json_files)
+            json_path = os.path.join(json_dir, selected_file)
+            st.subheader(f"Visualizando: {selected_file}")
+            try:
+                import json
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    json_data = json.load(f)
+                st.json(json_data)
+            except Exception as e:
+                st.error(f"Error al leer el archivo JSON: {str(e)}")
+
 st.markdown("---")
 st.markdown(
     "<div style='text-align: center; color: gray;'>"

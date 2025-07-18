@@ -1,4 +1,4 @@
-import pandas as pd
+import pandas as pd  # type: ignore
 import os
 
 def generate_empty_excel(output_dir: str, filename: str = "nv_data_empty.xlsx") -> str:

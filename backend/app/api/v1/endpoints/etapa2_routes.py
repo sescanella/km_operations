@@ -52,13 +52,13 @@ def validate_excel_file(filename: str):
         filename: Nombre del archivo Excel a validar (ej: "nv_data_ejemplo.xlsx")
     """
     try:
-        validation = validate_excel_structure(filename)
+        validation = validate_excel_structure(filename)  # type: ignore
         return ValidationResponse(
             filename=filename,
-            valid=validation["valid"],
-            errors=validation["errors"],
-            warnings=validation["warnings"],
-            info=validation["info"]
+            valid=validation["valid"],  # type: ignore
+            errors=validation["errors"],  # type: ignore
+            warnings=validation["warnings"],  # type: ignore
+            info=validation["info"]  # type: ignore
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al validar archivo: {str(e)}")

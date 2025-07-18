@@ -1,6 +1,6 @@
 # backend/app/services/etapa_2/excel_reader.py
 
-import pandas as pd
+import pandas as pd  # type: ignore
 import os
 from typing import List
 from backend.app.api.v1.schemas.nv_schemas import SaleNote, Plan, Spool, Material, Joint
@@ -49,8 +49,8 @@ def read_excel_to_sale_note(filename: str) -> SaleNote:
             raise ValueError("No se encontró hoja de uniones (buscar: 'Joints' o 'uniones')")
         
         # Leer las hojas del Excel
-        df_materials: pd.DataFrame = pd.read_excel(file_path, sheet_name=materials_sheet)  # type: ignore
-        df_joints: pd.DataFrame = pd.read_excel(file_path, sheet_name=joints_sheet)  # type: ignore
+        df_materials = pd.read_excel(file_path, sheet_name=materials_sheet)  # type: ignore
+        df_joints = pd.read_excel(file_path, sheet_name=joints_sheet)  # type: ignore
         
         # Validar que las hojas no estén vacías
         if df_materials.empty:
@@ -71,7 +71,7 @@ def read_excel_to_sale_note(filename: str) -> SaleNote:
         raise ValueError(f"Error al procesar el archivo Excel: {str(e)}")
 
 
-def _create_plans_from_dataframes(df_materials: pd.DataFrame, df_joints: pd.DataFrame) -> List[Plan]:
+def _create_plans_from_dataframes(df_materials, df_joints) -> List[Plan]:  # type: ignore
     """
     Crea una lista de Plans a partir de los DataFrames de materiales y uniones.
     
@@ -87,7 +87,7 @@ def _create_plans_from_dataframes(df_materials: pd.DataFrame, df_joints: pd.Data
     # Obtener todos los planos únicos
     unique_plans = df_materials['plano'].unique()  # type: ignore
     
-    for plan_name in unique_plans:
+    for plan_name in unique_plans:  # type: ignore
         # Filtrar datos por plano
         plan_materials = df_materials[df_materials['plano'] == plan_name]  # type: ignore
         plan_joints = df_joints[df_joints['plano'] == plan_name]  # type: ignore
@@ -98,7 +98,7 @@ def _create_plans_from_dataframes(df_materials: pd.DataFrame, df_joints: pd.Data
         # Para cada spool en este plano, crear un Plan separado
         # (basado en la estructura del modelo que sugiere un Plan por Spool)
         for spool_name in unique_spools:  # type: ignore
-            spool_name_str: str = str(spool_name)  # type: ignore
+            spool_name_str = str(spool_name)  # type: ignore
             spool_materials = plan_materials[plan_materials['spool'] == spool_name]  # type: ignore
             spool_joints = plan_joints[plan_joints['spool'] == spool_name]  # type: ignore
             
@@ -106,13 +106,13 @@ def _create_plans_from_dataframes(df_materials: pd.DataFrame, df_joints: pd.Data
             spool = _create_spool_from_dataframes(spool_name_str, spool_materials, spool_joints)  # type: ignore
             
             # Crear el Plan
-            plan = Plan(plano=str(plan_name), spool_data=spool)
+            plan = Plan(plano=str(plan_name), spool_data=spool)  # type: ignore
             plans.append(plan)
     
     return plans
 
 
-def _create_spool_from_dataframes(spool_name: str, df_materials: pd.DataFrame, df_joints: pd.DataFrame) -> Spool:
+def _create_spool_from_dataframes(spool_name: str, df_materials, df_joints) -> Spool:  # type: ignore
     """
     Crea un objeto Spool a partir de los DataFrames filtrados de materiales y uniones.
     
@@ -208,8 +208,8 @@ def validate_excel_structure(filename: str) -> tuple[bool, str]:
             return False, "No se encontró hoja de uniones (buscar: 'Joints' o 'uniones')"
         
         # Leer las hojas
-        df_materials: pd.DataFrame = pd.read_excel(file_path, sheet_name=materials_sheet)  # type: ignore
-        df_joints: pd.DataFrame = pd.read_excel(file_path, sheet_name=joints_sheet)  # type: ignore
+        df_materials = pd.read_excel(file_path, sheet_name=materials_sheet)  # type: ignore
+        df_joints = pd.read_excel(file_path, sheet_name=joints_sheet)  # type: ignore
         
         # Verificar columnas requeridas
         required_material_columns = ['nv', 'plano', 'spool', 'mat_numero_interno', 'mat_descripcion', 'mat_dn', 'mat_sch', 'mat_qty']

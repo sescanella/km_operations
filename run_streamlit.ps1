@@ -3,6 +3,11 @@ Write-Host "Iniciando Piping Reader - Interfaz Streamlit" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host ""
 
+# Configurar variables de entorno para evitar archivos .pyc
+$env:PYTHONDONTWRITEBYTECODE = "1"
+$env:PYTHONUNBUFFERED = "1"
+Write-Host "Variables de entorno configuradas (no .pyc)" -ForegroundColor Green
+
 # Verificar si el entorno virtual existe
 if (-not (Test-Path "venv\Scripts\python.exe")) {
     Write-Host "Error: No se encontró el entorno virtual" -ForegroundColor Red

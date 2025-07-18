@@ -3,6 +3,11 @@ echo Iniciando Piping Reader - Interfaz Streamlit
 echo ==========================================
 echo.
 
+REM Configurar variables de entorno para evitar archivos .pyc
+set PYTHONDONTWRITEBYTECODE=1
+set PYTHONUNBUFFERED=1
+echo Variables de entorno configuradas (no .pyc)
+
 REM Verificar si el entorno virtual existe
 if not exist "venv\Scripts\activate.bat" (
     echo Error: No se encontró el entorno virtual
