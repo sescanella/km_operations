@@ -2,7 +2,6 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 class Material(BaseModel):
-    mat_numero_interno: str
     mat_descripcion: str
     mat_dn: str
     mat_sch: str
@@ -12,9 +11,6 @@ class Joint(BaseModel):
     union_numero: str
     union_dn: str
     union_tipo: str
-    armador: Optional[str] = None
-    soldador_raiz: Optional[str] = None
-    soldador_remate: Optional[str] = None
 
 class Spool(BaseModel):
     spool: str

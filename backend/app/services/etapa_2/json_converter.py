@@ -1,6 +1,6 @@
 import os
 import json
-from backend.app.services.etapa_2.excel_reader import read_excel_to_sale_note
+from backend.app.services.etapa_2.excel_reader_clean import read_excel_to_sale_note
 from backend.app.api.v1.schemas.nv_schemas import SaleNote
 from backend.app.core.logger import setup_logger
 

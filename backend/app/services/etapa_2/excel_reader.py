@@ -128,7 +128,6 @@ def _create_spool_from_dataframes(spool_name: str, df_materials, df_joints) -> S
     materials: List[Material] = []
     for _, row in df_materials.iterrows():  # type: ignore
         material = Material(
-            mat_numero_interno=str(row['mat_numero_interno']),  # type: ignore
             mat_descripcion=str(row['mat_descripcion']),  # type: ignore
             mat_dn=str(row['mat_dn']),  # type: ignore
             mat_sch=str(row['mat_sch']),  # type: ignore
@@ -142,11 +141,7 @@ def _create_spool_from_dataframes(spool_name: str, df_materials, df_joints) -> S
         joint = Joint(
             union_numero=str(row['union_numero']),  # type: ignore
             union_dn=str(row['union_dn']),  # type: ignore
-            union_tipo=str(row['union_tipo']),  # type: ignore
-            # Estos campos son opcionales y pueden no estar en el Excel
-            armador=str(row.get('armador', '')) if pd.notna(row.get('armador')) else None,  # type: ignore
-            soldador_raiz=str(row.get('soldador_raiz', '')) if pd.notna(row.get('soldador_raiz')) else None,  # type: ignore
-            soldador_remate=str(row.get('soldador_remate', '')) if pd.notna(row.get('soldador_remate')) else None  # type: ignore
+            union_tipo=str(row['union_tipo'])  # type: ignore
         )
         joints.append(joint)
     
@@ -212,7 +207,7 @@ def validate_excel_structure(filename: str) -> tuple[bool, str]:
         df_joints = pd.read_excel(file_path, sheet_name=joints_sheet)  # type: ignore
         
         # Verificar columnas requeridas
-        required_material_columns = ['nv', 'plano', 'spool', 'mat_numero_interno', 'mat_descripcion', 'mat_dn', 'mat_sch', 'mat_qty']
+        required_material_columns = ['nv', 'plano', 'spool', 'mat_descripcion', 'mat_dn', 'mat_sch', 'mat_qty']
         required_joint_columns = ['nv', 'plano', 'spool', 'union_numero', 'union_dn', 'union_tipo']
         
         missing_material_columns = [col for col in required_material_columns if col not in df_materials.columns]
