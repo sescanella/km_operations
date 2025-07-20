@@ -126,21 +126,42 @@ def _create_spool_from_dataframes(spool_name: str, df_materials: pd.DataFrame, d
     # Crear lista de materiales
     materials: List[Material] = []
     for _, row in df_materials.iterrows():  # type: ignore
+        # Manejar la nueva columna mat_numero_interno si existe
+        mat_numero_interno = None
+        if 'mat_numero_interno' in df_materials.columns:
+            mat_numero_interno = str(row['mat_numero_interno']) if pd.notna(row['mat_numero_interno']) else None
+        
         material = Material(
             mat_descripcion=str(row['mat_descripcion']),  # type: ignore
             mat_dn=str(row['mat_dn']),  # type: ignore
             mat_sch=str(row['mat_sch']),  # type: ignore
-            mat_qty=int(row['mat_qty'])  # type: ignore
+            mat_qty=int(row['mat_qty']),  # type: ignore
+            mat_numero_interno=mat_numero_interno
         )
         materials.append(material)
     
     # Crear lista de uniones
     joints: List[Joint] = []
     for _, row in df_joints.iterrows():  # type: ignore
+        # Manejar las nuevas columnas si existen
+        union_armador = None
+        union_soldador_raiz = None
+        union_soldador_remate = None
+        
+        if 'union_armador' in df_joints.columns:
+            union_armador = str(row['union_armador']) if pd.notna(row['union_armador']) else None
+        if 'union_soldador_raiz' in df_joints.columns:
+            union_soldador_raiz = str(row['union_soldador_raiz']) if pd.notna(row['union_soldador_raiz']) else None
+        if 'union_soldador_remate' in df_joints.columns:
+            union_soldador_remate = str(row['union_soldador_remate']) if pd.notna(row['union_soldador_remate']) else None
+        
         joint = Joint(
             union_numero=str(row['union_numero']),  # type: ignore
             union_dn=str(row['union_dn']),  # type: ignore
-            union_tipo=str(row['union_tipo'])  # type: ignore
+            union_tipo=str(row['union_tipo']),  # type: ignore
+            union_armador=union_armador,
+            union_soldador_raiz=union_soldador_raiz,
+            union_soldador_remate=union_soldador_remate
         )
         joints.append(joint)
     

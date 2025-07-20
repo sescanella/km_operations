@@ -15,6 +15,7 @@ sys.path.append(str(Path(__file__).parent.parent / "backend"))
 
 from backend.app.api.v1.schemas.nv_schemas import SaleNote, Plan, Spool, Material, Joint
 from backend.app.services.etapa_2.json_converter import save_sale_note_to_json
+from backend.app.services.etapa_2.excel_exporter import sale_note_to_excel, generate_excel_filename
 
 JSON_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "json_data")
 
@@ -122,35 +123,86 @@ def show():
         col_materials, col_joints = st.columns([1, 1])
         
         with col_materials:
-            st.markdown("#### 📦 Materiales")
+            st.markdown("#### 📦 Materiales (Editable)")
             
-            # Convertir materiales a DataFrame para visualización
+            # Convertir materiales a DataFrame editable incluyendo nuevos campos
             materials_data = []
-            for material in current_plan.spool_data.materials:
+            for i, material in enumerate(current_plan.spool_data.materials):
                 materials_data.append({
+                    "index": i,
                     "Descripción": material.mat_descripcion,
                     "Diámetro": material.mat_dn,
                     "SCH": material.mat_sch,
-                    "Cantidad": material.mat_qty
+                    "Cantidad": material.mat_qty,
+                    "Número Interno": material.mat_numero_interno or ""
                 })
             
             if materials_data:
-                df_materials = pd.DataFrame(materials_data)
-                st.dataframe(df_materials, use_container_width=True, hide_index=True)
+                # Editor de datos para materiales
+                edited_materials = st.data_editor(
+                    pd.DataFrame(materials_data).drop('index', axis=1),
+                    use_container_width=True,
+                    hide_index=True,
+                    num_rows="dynamic",
+                    key=f"materials_editor_{plan_index}"
+                )
+                
+                # Botón para guardar cambios en materiales
+                if st.button("💾 Guardar cambios en materiales", key=f"save_materials_{plan_index}"):
+                    try:
+                        # Actualizar los materiales en el objeto SaleNote
+                        new_materials = []
+                        for _, row in edited_materials.iterrows():
+                            material = Material(
+                                mat_descripcion=str(row["Descripción"]),
+                                mat_dn=str(row["Diámetro"]),
+                                mat_sch=str(row["SCH"]),
+                                mat_qty=int(row["Cantidad"]),
+                                mat_numero_interno=str(row["Número Interno"]) if row["Número Interno"] else None
+                            )
+                            new_materials.append(material)
+                        
+                        # Actualizar el plan actual
+                        sale_note.plans[plan_index].spool_data.materials = new_materials
+                        
+                        # Guardar el archivo JSON actualizado
+                        save_sale_note_to_json(sale_note)
+                        
+                        st.success("✅ Cambios en materiales guardados exitosamente!")
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"❌ Error al guardar cambios en materiales: {str(e)}")
             else:
                 st.info("No hay materiales para este plan/spool.")
+                
+                # Permitir agregar nuevos materiales
+                if st.button("➕ Agregar nuevo material", key=f"add_material_{plan_index}"):
+                    new_material = Material(
+                        mat_descripcion="Nueva descripción",
+                        mat_dn="DN",
+                        mat_sch="SCH",
+                        mat_qty=1,
+                        mat_numero_interno=None
+                    )
+                    sale_note.plans[plan_index].spool_data.materials.append(new_material)
+                    save_sale_note_to_json(sale_note)
+                    st.rerun()
         
         with col_joints:
             st.markdown("#### 🔗 Uniones (Editable)")
             
-            # Convertir uniones a DataFrame editable
+            # Convertir uniones a DataFrame editable incluyendo nuevos campos
             joints_data = []
             for i, joint in enumerate(current_plan.spool_data.joints):
                 joints_data.append({
                     "index": i,
                     "Número de Unión": joint.union_numero,
                     "Diámetro": joint.union_dn,
-                    "Tipo": joint.union_tipo
+                    "Tipo": joint.union_tipo,
+                    "Armador": joint.union_armador or "",
+                    "Soldador Raíz": joint.union_soldador_raiz or "",
+                    "Soldador Remate": joint.union_soldador_remate or ""
                 })
             
             if joints_data:
@@ -172,7 +224,10 @@ def show():
                             joint = Joint(
                                 union_numero=str(row["Número de Unión"]),
                                 union_dn=str(row["Diámetro"]),
-                                union_tipo=str(row["Tipo"])
+                                union_tipo=str(row["Tipo"]),
+                                union_armador=str(row["Armador"]) if row["Armador"] else None,
+                                union_soldador_raiz=str(row["Soldador Raíz"]) if row["Soldador Raíz"] else None,
+                                union_soldador_remate=str(row["Soldador Remate"]) if row["Soldador Remate"] else None
                             )
                             new_joints.append(joint)
                         
@@ -195,9 +250,14 @@ def show():
                     new_joint = Joint(
                         union_numero="Nueva Unión",
                         union_dn="DN",
-                        union_tipo="Tipo"
+                        union_tipo="Tipo",
+                        union_armador=None,
+                        union_soldador_raiz=None,
+                        union_soldador_remate=None
                     )
                     sale_note.plans[plan_index].spool_data.joints.append(new_joint)
+                    save_sale_note_to_json(sale_note)
+                    st.rerun()
                     save_sale_note_to_json(sale_note)
                     st.rerun()
         
@@ -205,7 +265,7 @@ def show():
         st.markdown("---")
         st.markdown("### ⚙️ Acciones")
         
-        col_actions1, col_actions2, col_actions3 = st.columns(3)
+        col_actions1, col_actions2, col_actions3, col_actions4 = st.columns(4)
         
         with col_actions1:
             if st.button("📥 Descargar JSON"):
@@ -219,10 +279,29 @@ def show():
                 )
         
         with col_actions2:
+            if st.button("📊 Descargar Excel actualizado"):
+                try:
+                    # Generar el archivo Excel con todas las variables
+                    excel_bytes = sale_note_to_excel(sale_note)
+                    filename = generate_excel_filename(sale_note, include_timestamp=True)
+                    
+                    st.download_button(
+                        label="📄 Descargar Excel",
+                        data=excel_bytes.getvalue(),
+                        file_name=filename,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        help="Descarga un archivo Excel con todas las columnas originales más las nuevas variables editables"
+                    )
+                    st.success("✅ Excel generado exitosamente!")
+                    
+                except Exception as e:
+                    st.error(f"❌ Error al generar Excel: {str(e)}")
+        
+        with col_actions3:
             if st.button("🔄 Recargar desde archivo"):
                 st.rerun()
         
-        with col_actions3:
+        with col_actions4:
             if st.button("🗑️ Eliminar JSON", type="secondary"):
                 if st.checkbox("Confirmar eliminación"):
                     try:

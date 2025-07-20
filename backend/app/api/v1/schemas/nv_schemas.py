@@ -6,11 +6,15 @@ class Material(BaseModel):
     mat_dn: str
     mat_sch: str
     mat_qty: int
+    mat_numero_interno: Optional[str] = None
 
 class Joint(BaseModel):
     union_numero: str
     union_dn: str
     union_tipo: str
+    union_armador: Optional[str] = None
+    union_soldador_raiz: Optional[str] = None
+    union_soldador_remate: Optional[str] = None
 
 class Spool(BaseModel):
     spool: str

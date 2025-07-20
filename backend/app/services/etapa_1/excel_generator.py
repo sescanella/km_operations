@@ -7,16 +7,16 @@ def generate_empty_excel(output_dir: str, filename: str = "nv_data_empty.xlsx") 
     pero sin datos (solo los headers).
     """
 
-    # Definir columnas de cada hoja
+    # Definir columnas de cada hoja (orden correcto)
     materials_columns = [
         "nv",
         "plano",
         "spool",
-        "mat_numero_interno",
         "mat_descripcion",
         "mat_dn",
         "mat_sch",
-        "mat_qty"
+        "mat_qty",
+        "mat_numero_interno"
     ]
 
     joints_columns = [
@@ -26,9 +26,9 @@ def generate_empty_excel(output_dir: str, filename: str = "nv_data_empty.xlsx") 
         "union_numero",
         "union_dn",
         "union_tipo",
-        "armador",
-        "soldador_raiz",
-        "soldador_remate"
+        "union_armador",
+        "union_soldador_raiz",
+        "union_soldador_remate"
     ]
 
     # Crear DataFrames vacíos
